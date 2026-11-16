@@ -1,0 +1,54 @@
+{
+  "paper": {
+    "width_mm": 210.0,
+    "height_mm": 297.0,
+    "margins": {
+      "left_mm": 15.0,
+      "right_mm": 15.0,
+      "top_mm": 15.0,
+      "bottom_mm": 15.0
+    }
+  },
+  "drawing_dimensions": {
+    "drawing_width_mm": 180.0,
+    "drawing_height_mm": 180.0
+  },
+  "origin": "bottom_left",
+  "stats": {
+    "total_contours": 1,
+    "total_points": 5,
+    "pen_down_distance_mm": 720.0,
+    "pen_up_distance_mm": 84.85,
+    "total_distance_mm": 804.85,
+    "estimated_time_seconds": 16.2,
+    "estimated_time_formatted": "16s",
+    "drawing_width_mm": 180.0,
+    "drawing_height_mm": 180.0,
+    "bounds": {
+      "min_x": 15.0,
+      "max_x": 195.0,
+      "min_y": 15.0,
+      "max_y": 195.0
+    }
+  },
+  "contours_mm": [
+    [
+      [15.0, 15.0],
+      [195.0, 15.0],
+      [195.0, 195.0],
+      [15.0, 195.0],
+      [15.0, 15.0]
+    ]
+  ],
+  "commands": [
+    { "type": "PEN_UP" },
+    { "type": "MOVE", "x": 15.0, "y": 15.0 },
+    { "type": "PEN_DOWN" },
+    { "type": "MOVE", "x": 195.0, "y": 15.0 },
+    { "type": "MOVE", "x": 195.0, "y": 195.0 },
+    { "type": "MOVE", "x": 15.0, "y": 195.0 },
+    { "type": "MOVE", "x": 15.0, "y": 15.0 },
+    { "type": "PEN_UP" },
+    { "type": "MOVE", "x": 0.0, "y": 0.0 }
+  ]
+}

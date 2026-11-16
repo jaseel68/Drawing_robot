@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drawing Robot Control Center</title>
+    <meta name="description" content="Beginner-friendly control dashboard for a 2-wheel ESP32 drawing robot. Image processing, vector path generation, simulation, and micro-controller communication.">
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- <link rel="stylesheet" href="/static/css/style.css"> -->
+</head>
+<body class="dark-theme">
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="app-container">
+
+        <!-- HEADER SECTION -->
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="logo-icon">🤖</div>
+                <div class="title-group">
+                    <h1>DRAWING ROBOT</h1>
+                </div>
+            </div>
+
+            <!-- ESP32 WI-FI CONNECTION CONTROL IN HEADER -->
+            <div class="header-status-panel">
+                <div class="header-ip-group">
+                    <label for="esp32IpInput" class="ip-label">ESP32 IP:</label>
+                    <input type="text" id="esp32IpInput" value="192.168.1.100" class="form-input header-ip-input" placeholder="192.168.1.100">
+                    <button class="btn btn-secondary btn-sm" id="testConnectBtn">Test</button>
+                    <button class="btn btn-primary btn-sm" id="connectBtn">Connect</button>
+                </div>
+
+                <div class="connection-badge disconnected" id="connectionBadge">
+                    <span class="badge-dot"></span>
+                    <span id="connectionBadgeText">ESP32 Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN THREE-COLUMN DASHBOARD LAYOUT -->
+        <main class="dashboard-grid">
+
+            <!-- ==================================================== -->
+            <!-- LEFT PANEL: IMAGE UPLOAD & OPENCV PROCESSING CONTROL -->
+            <!-- ==================================================== -->
+            <aside class="panel left-panel">
+                <div class="panel-header">
+                    <h2><span class="step-num">1</span> Image Processing</h2>
+                </div>
+
+                <!-- DROPZONE UPLOAD AREA -->
+                <div class="upload-box" id="dropZone">
+                    <input type="file" id="imageInput" accept="image/png, image/jpeg, image/jpg, image/bmp, image/webp" hidden>
+                    <div class="upload-content">
+                        <div class="upload-icon">📁</div>
+                        <p class="upload-title">Drag & Drop Image Here</p>
+                        <p class="upload-subtitle">Supports PNG, JPG, JPEG, BMP, WEBP</p>
+                        <button class="btn btn-secondary btn-sm" id="selectFileBtn">Choose File</button>
+                    </div>
+                </div>
+
+                <!-- IMAGE METADATA CARD -->
+                <div class="metadata-card hidden" id="metadataCard">
+                    <div class="meta-row">
+                        <span class="meta-label">File:</span>
+                        <span class="meta-val" id="metaFilename">-</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">Dimensions:</span>
+                        <span class="meta-val" id="metaDimensions">-</span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">File Size:</span>
+                        <span class="meta-val" id="metaSize">-</span>
+                    </div>
+                </div>
+
+                <!-- OPENCV SETTINGS FORM (MINIMAL UI WITH AUTO-PROCESSING) -->
+                <div class="settings-group">
+                    <h3>Image Preset</h3>
+                    
+                    <div class="control-field">
+                        <label for="modeSelect">Drawing Style</label>
+                        <select id="modeSelect" class="form-select">
+                            <option value="single_line" selected>✏️ Single Line / Centerline (Recommended for Robot)</option>
+                            <option value="edge">Detailed Edge Detection (Outlines)</option>
+                            <option value="outline">Simple Outline (Black & White)</option>
+                            <option value="threshold">Fixed Threshold</option>
+                            <option value="contour">Adaptive Contour</option>
+                        </select>
+                    </div>
+
+                    <!-- MINIMAL AUTO-PROCESS STATUS BADGE -->
+                    <div class="auto-process-badge">
+                        <span class="badge-dot pulse"></span>
+                        <span>Auto-Converts Image to Vector Path</span>
+                    </div>
+
+                    <!-- COLLAPSIBLE FINE-TUNING SETTINGS (OPTIONAL) -->
+                    <details class="advanced-settings" style="margin-top: 14px;">
+                        <summary>Adjust Fine-Tuning Settings</summary>
+                        <div class="advanced-content">
+                            <!-- THRESHOLD SLIDER -->
+                            <div class="control-field hidden" id="thresholdField">
+                                <div class="label-row">
+                                    <label for="thresholdSlider">Threshold Level</label>
+                                    <span class="val-display" id="thresholdVal">128</span>
+                                </div>
+                                <input type="range" id="thresholdSlider" min="0" max="255" value="128" class="form-range">
+                            </div>
+
+                            <!-- CANNY SLIDERS -->
+                            <div class="control-field-group" id="cannyFields">
+                                <div class="control-field">
+                                    <div class="label-row">
+                                        <label for="cannyLowSlider">Canny Low</label>
+                                        <span class="val-display" id="cannyLowVal">50</span>
+                                    </div>
+                                    <input type="range" id="cannyLowSlider" min="0" max="255" value="50" class="form-range">
+                                </div>
+
+                                <div class="control-field">
+                                    <div class="label-row">
+                                        <label for="cannyHighSlider">Canny High</label>
+                                        <span class="val-display" id="cannyHighVal">150</span>
+                                    </div>
+                                    <input type="range" id="cannyHighSlider" min="0" max="255" value="150" class="form-range">
+                                </div>
+                            </div>
+
+                            <div class="control-field">
+                                <label for="blurSelect">Noise Reduction</label>
+                                <select id="blurSelect" class="form-select">
+                                    <option value="gaussian" selected>Gaussian Blur</option>
+                                    <option value="median">Median Blur</option>
+                                    <option value="none">None</option>
+                                </select>
+                            </div>
+
+                            <div class="control-field">
+                                <label for="retrievalSelect">Contour Retrieval</label>
+                                <select id="retrievalSelect" class="form-select">
+                                    <option value="tree" selected>Tree Hierarchy</option>
+                                    <option value="external">External Only</option>
+                                    <option value="all">All Contours</option>
+                                </select>
+                            </div>
+
+                            <div class="control-field">
+                                <div class="label-row">
+                                    <label for="toleranceSlider">Simplification Tolerance</label>
+                                    <span class="val-display" id="toleranceVal">1.5</span>
+                                </div>
+                                <input type="range" id="toleranceSlider" min="0.1" max="10.0" step="0.1" value="1.5" class="form-range">
+                            </div>
+
+                            <div class="control-field">
+                                <div class="label-row">
+                                    <label for="minAreaSlider">Min Contour Area</label>
+                                    <span class="val-display" id="minAreaVal">10</span>
+                                </div>
+                                <input type="range" id="minAreaSlider" min="0" max="200" value="10" class="form-range">
+                            </div>
+
+                            <div class="checkbox-field">
+                                <input type="checkbox" id="invertCheckbox">
+                                <label for="invertCheckbox">Invert Image Colors</label>
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- PROCESS BUTTON -->
+                    <button class="btn btn-primary btn-block" id="processBtn" disabled style="margin-top: 12px;">
+                        <span>⚙️ RE-PROCESS IMAGE</span>
+                    </button>
+                </div>
+            </aside>
+
+
+            <!-- ==================================================== -->
+            <!-- CENTER PANEL: INTERACTIVE CANVAS & PATH PREVIEW      -->
+            <!-- ==================================================== -->
+            <section class="panel center-panel">
+                <div class="panel-header tab-header">
+                    <h2><span class="step-num">2</span> Canvas & Path Preview</h2>
+                    <div class="view-tabs">
+                        <button class="tab-btn active" id="tabPath">Robot Path Canvas</button>
+                        <button class="tab-btn" id="tabStages">Image Processing Stages</button>
+                    </div>
+                </div>
+
+                <!-- WARNING ALERT BOX -->
+                <div class="alert-box hidden" id="warningAlert">
+                    <span class="alert-icon">⚠️</span>
+                    <span id="warningMessage">Path contains high point count.</span>
+                </div>
+
+                <!-- CANVAS VIEW CONTAINER -->
+                <div class="canvas-view-container">
+                    
+                    <!-- TAB 1: ROBOT PATH CANVAS -->
+                    <div class="tab-content active" id="pathCanvasWrapper">
+                        <div class="canvas-toolbar">
+                            <div class="toolbar-info">
+                                <span class="badge badge-paper" id="paperDimensionsBadge">Paper: A4 (210 x 297 mm)</span>
+                                <span class="badge badge-origin" id="originBadge">Origin: Bottom-Left (0,0)</span>
+                            </div>
+                            <div class="toolbar-controls">
+                                <button class="btn-icon" id="zoomInBtn" title="Zoom In">+</button>
+                                <button class="btn-icon" id="zoomOutBtn" title="Zoom Out">-</button>
+                                <button class="btn-icon" id="zoomResetBtn" title="Reset View">🔄</button>
+                            </div>
+                        </div>
+
+                        <!-- HTML5 CANVAS -->
+                        <div class="canvas-viewport" id="canvasViewport">
+                            <canvas id="pathCanvas" width="800" height="600"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: IMAGE PROCESSING STAGES PREVIEW -->
+                    <div class="tab-content hidden" id="stagesWrapper">
+                        <div class="stages-grid">
+                            <div class="stage-card">
+                                <h4>1. Original Image</h4>
+                                <div class="stage-img-box">
+                                    <img id="imgStageOriginal" alt="Original Upload" src="">
+                                </div>
+                            </div>
+                            <div class="stage-card">
+                                <h4>2. Grayscale</h4>
+                                <div class="stage-img-box">
+                                    <img id="imgStageGrayscale" alt="Grayscale Stage" src="">
+                                </div>
+                            </div>
+                            <div class="stage-card">
+                                <h4>3. Threshold / Edges</h4>
+                                <div class="stage-img-box">
+                                    <img id="imgStageProcessed" alt="Threshold Stage" src="">
+                                </div>
+                            </div>
+                            <div class="stage-card">
+                                <h4>4. Extracted Contours</h4>
+                                <div class="stage-img-box">
+                                    <img id="imgStageContours" alt="Contour Vector Stage" src="">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PATH STATISTICS SUMMARY PANEL -->
+                <div class="stats-panel">
+                    <div class="stat-card">
+                        <span class="stat-label">Contours</span>
+                        <span class="stat-value" id="statContours">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Points</span>
+                        <span class="stat-value" id="statPoints">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Draw Distance</span>
+                        <span class="stat-value" id="statDrawDist">0.0 mm</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Travel Distance</span>
+                        <span class="stat-value" id="statTravelDist">0.0 mm</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Est. Time</span>
+                        <span class="stat-value highlight" id="statEstTime">0s</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Bounds (W x H)</span>
+                        <span class="stat-value" id="statBounds">0 x 0 mm</span>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ==================================================== -->
+            <!-- RIGHT PANEL: PAPER, ROBOT & EXPORT CONFIGURATION     -->
+            <!-- ==================================================== -->
+            <aside class="panel right-panel">
+                <div class="panel-header">
+                    <h2><span class="step-num">3</span> Paper & Robot Config</h2>
+                </div>
+
+                <!-- PAPER CONFIGURATION -->
+                <div class="settings-group">
+                    <h3>Paper Configuration</h3>
+                    
+                    <div class="control-field">
+                        <label for="paperSizeSelect">Paper Size</label>
+                        <select id="paperSizeSelect" class="form-select">
+                            <option value="A1">A1 (594 × 841 mm)</option>
+                            <option value="A2">A2 (420 × 594 mm)</option>
+                            <option value="A3">A3 (297 × 420 mm)</option>
+                            <option value="A4" selected>A4 (210 × 297 mm)</option>
+                            <option value="A5">A5 (148 × 210 mm)</option>
+                            <option value="Custom">Custom Dimensions</option>
+                        </select>
+                    </div>
+
+                    <!-- CUSTOM PAPER DIMENSIONS -->
+                    <div class="control-field-group hidden" id="customPaperFields">
+                        <div class="control-field">
+                            <label for="customWidthInput">Width (mm)</label>
+                            <input type="number" id="customWidthInput" value="200" min="50" max="1000" class="form-input">
+                        </div>
+                        <div class="control-field">
+                            <label for="customHeightInput">Height (mm)</label>
+                            <input type="number" id="customHeightInput" value="200" min="50" max="1000" class="form-input">
+                        </div>
+                    </div>
+
+                    <!-- PAPER MARGINS -->
+                    <details class="margins-details" open>
+                        <summary>Paper Margins (mm)</summary>
+                        <div class="margin-grid">
+                            <div class="margin-field">
+                                <label for="marginLeft">Left</label>
+                                <input type="number" id="marginLeft" value="15" min="0" max="100" class="form-input">
+                            </div>
+                            <div class="margin-field">
+                                <label for="marginRight">Right</label>
+                                <input type="number" id="marginRight" value="15" min="0" max="100" class="form-input">
+                            </div>
+                            <div class="margin-field">
+                                <label for="marginTop">Top</label>
+                                <input type="number" id="marginTop" value="15" min="0" max="100" class="form-input">
+                            </div>
+                            <div class="margin-field">
+                                <label for="marginBottom">Bottom</label>
+                                <input type="number" id="marginBottom" value="15" min="0" max="100" class="form-input">
+                            </div>
+                        </div>
+                    </details>
+
+                    <!-- ROBOT ORIGIN & SCALE MODE -->
+                    <div class="control-field">
+                        <label for="originSelect">Robot Origin</label>
+                        <select id="originSelect" class="form-select">
+                            <option value="bottom_left" selected>Bottom-Left (0,0) - Recommended</option>
+                            <option value="top_left">Top-Left (0,0)</option>
+                            <option value="center">Center of Paper</option>
+                        </select>
+                    </div>
+
+                    <div class="control-field">
+                        <label for="scaleModeSelect">Scale Mode</label>
+                        <select id="scaleModeSelect" class="form-select">
+                            <option value="fit_paper" selected>Fit to Paper Area</option>
+                            <option value="fit_width">Fit Width</option>
+                            <option value="fit_height">Fit Height</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-secondary btn-block" id="generatePathBtn" disabled>
+                        📐 GENERATE ROBOT PATH
+                    </button>
+                </div>
+
+                <!-- SAVE & EXPORT PATH -->
+                <div class="settings-group">
+                    <h3>Export & Save Path</h3>
+                    <div class="btn-group">
+                        <button class="btn btn-outline" id="exportJsonBtn" disabled>JSON</button>
+                        <button class="btn btn-outline" id="exportCsvBtn" disabled>CSV</button>
+                        <button class="btn btn-outline" id="savePathBtn" disabled>Save</button>
+                    </div>
+                </div>
+            </aside>
+
+        </main>
+
+
+        <!-- ==================================================== -->
+        <!-- BOTTOM BAR: ROBOT CONTROL & LIVE TELEMETRY TOOLBAR   -->
+        <!-- ==================================================== -->
+        <footer class="app-footer">
+            <div class="telemetry-bar">
+                <div class="telemetry-item">
+                    <span class="t-label">Robot State:</span>
+                    <span class="t-badge idle" id="robotStateBadge">IDLE</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="t-label">Position:</span>
+                    <span class="t-val" id="robotPosText">X: 0.00 mm | Y: 0.00 mm</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="t-label">Pen State:</span>
+                    <span class="t-val" id="robotPenText">UP</span>
+                </div>
+                <div class="telemetry-item progress-item">
+                    <span class="t-label">Progress:</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="robotProgressBar" style="width: 0%;"></div>
+                    </div>
+                    <span class="t-val" id="robotProgressText">0%</span>
+                </div>
+                <div class="telemetry-item">
+                    <span class="t-label">Commands:</span>
+                    <span class="t-val" id="robotCmdCounter">0 / 0</span>
+                </div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="control-actions-bar">
+                <div class="left-actions">
+                    <button class="btn btn-nav" id="btnHome">🏠 HOME</button>
+                    <button class="btn btn-nav" id="btnPenUp">🖊️ PEN UP</button>
+                    <button class="btn btn-nav" id="btnPenDown">✏️ PEN DOWN</button>
+                </div>
+
+                <div class="main-drawing-actions">
+                    <button class="btn btn-primary btn-lg" id="btnSendRobot" disabled>
+                        📤 SEND TO ROBOT & START DRAWING
+                    </button>
+                    <button class="btn btn-emergency" id="btnEmergencyStop">🚨 E-STOP</button>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+
+    <!-- MAIN JAVASCRIPT -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
